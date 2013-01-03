@@ -27,7 +27,7 @@ void setup(){
 	player = new Player(halfWidth, halfHeight);
 	zm = new ZombieManager(150);
 	
-	for(int i=0;i<19;i++) {
+	for(int i=0;i<20;i++) {
 		zm.addZombie();
 	}
 }
@@ -40,10 +40,12 @@ void draw(){
 	
 	player.draw();
 
+	// add zombies periodically based on difficulty
 	if(!(frameCount % difficulty[currentDifficulty])){
 		zm.addZombie();
 	}
 	
+	// increase difficulty every 1000 frames
 	if(!(frameCount % 1000)) {
 		currentDifficulty++;
 		
@@ -53,7 +55,7 @@ void draw(){
 
 	zm.run();
 	
-	//killCount
+	// killCount
 	textSize(20);
 	fill( 255, 255, 255 );
 	str = "Kills: " + killCount;
@@ -93,6 +95,7 @@ class Player
 {
 	float x, y, angle, radius;
 	int maxBullets = 50;
+	int health = 100;
 	
 	ArrayList bullets;
 
@@ -118,33 +121,42 @@ class Player
 				b.draw();
 		}
 		
-		if(canFire) {
-			if(!(frameCount % 4))
-				player.fire();
+		if(this.health > 0) {
+			
+			if(canFire) {
+				// only fire every 4th frame
+				if(!(frameCount % 4))
+					player.fire();
+			}
+			
+			this.radius = this.radius + (sin( frameCount / 4 ) / 2);
+
+			float dx = nX - this.x;
+			float dy = nY - this.y;
+
+			this.angle = atan2(dy, dx);
+
+			pushMatrix();
+			translate(this.x, this.y);
+			rotate(this.angle);
+			// Set stroke-color black
+			stroke(000);
+
+			// Draw player
+			// Set fill-color to blue
+			fill( 0, 121, 184 );
+			ellipse( 0, 0, this.radius /2 , this.radius );
+
+			// Set fill-color to light blue
+			fill( 0, 121, 255 );
+			ellipse( 0, 0, this.radius / 2, this.radius / 2 );
+			popMatrix();
+		} else {
+			// dead
+			textSize(50);
+			fill( 0, 121, 184 );
+			text("GAME OVER", (width/2)-150, height/2-85);			
 		}
-		
-		this.radius = this.radius + (sin( frameCount / 4 ) / 2);
-
-		float dx = nX - this.x;
-		float dy = nY - this.y;
-
-		this.angle = atan2(dy, dx);
-
-		pushMatrix();
-		translate(this.x, this.y);
-		rotate(this.angle);
-		// Set stroke-color black
-		stroke(000);
-
-		// Draw player
-		// Set fill-color to blue
-		fill( 0, 121, 184 );
-		ellipse( 0, 0, this.radius /2 , this.radius );
-
-		// Set fill-color to light blue
-		fill( 0, 121, 255 );
-		ellipse( 0, 0, this.radius / 2, this.radius / 2 );
-		popMatrix();
 	}
 	
 	void fire (){
@@ -152,7 +164,16 @@ class Player
 		if(bullets.size() > maxBullets-1) 
 			return;
 		bullets.add(new Bullet(x, y, angle));
-	}	
+	}
+	
+	void takeDamage() {
+		this.health--;
+		
+		if(this.health <= 0) {
+			
+			this.health = 0;
+		}
+	}
 }
 
 class Zombie
@@ -229,6 +250,8 @@ class ZombieManager
 					
 					if(dist < z.size) {
 						// player take damage
+						player.takeDamage();
+						canMove = false;
 					}
 				}
 				
