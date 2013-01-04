@@ -4,6 +4,13 @@ int halfWidth, halfHeight;
 int X, Y;
 int nX, nY;
 int delay = 16;
+int gameState = 1;
+/*
+0 - start screen
+1 - play
+2 - win
+3 - death
+*/
 Player player;
 Zombiemanager zm;
 boolean canFire = false;
@@ -26,7 +33,7 @@ void setup(){
 
 	player = new Player(halfWidth, halfHeight);
 	zm = new ZombieManager(150);
-	
+
 	for(int i=0;i<20;i++) {
 		zm.addZombie();
 	}
@@ -37,29 +44,55 @@ void draw(){
 
 	// Fill canvas grey
 	background( 100 );
-	
+
+	switch (gameState){
+		case 0:
+			break;
+		case 1:
+			drawPlay();
+			break;
+		case 2:
+			drawPlay();
+			drawGameOver();
+			break;
+		case 3:
+			break;
+	}
+
+
+
+}
+
+void drawPlay () {
 	player.draw();
 
 	// add zombies periodically based on difficulty
 	if(!(frameCount % difficulty[currentDifficulty])){
 		zm.addZombie();
 	}
-	
+
 	// increase difficulty every 1000 frames
 	if(!(frameCount % 1000)) {
 		currentDifficulty++;
-		
+
 		if(currentDifficulty > 4)
 			currentDifficulty = 4;
 	}
 
 	zm.run();
-	
+
 	// killCount
 	textSize(20);
 	fill( 255, 255, 255 );
 	str = "Kills: " + killCount;
 	text(str, 10, 20);
+}
+
+void drawGameOver() {
+	// dead
+	textSize(75);
+	fill( 0, 0, 0 );
+	text("GAME OVER", (width/2)-200, height/2-85);
 }
 
 
@@ -96,39 +129,39 @@ class Player
 	float x, y, angle, radius;
 	int maxBullets = 50;
 	int health = 100;
-	
+
 	ArrayList bullets;
 
 	Player(int x, int y) {
 		this.x = x;
 		this.y = y;
 		this.radius = 50.0;
-		
+
 		this.bullets = new ArrayList();
 	}
 
 	void draw() {
 
 		//draw bullets
-		for(int i=bullets.size()-1;i>=0;i--){ 
+		for(int i=bullets.size()-1;i>=0;i--){
 			bullet b = (bullet) bullets.get(i);
-			
+
 			b.move();
-			
+
 			if(!b.alive)
 				bullets.remove(i);
 			else
 				b.draw();
 		}
-		
+
 		if(this.health > 0) {
-			
+
 			if(canFire) {
 				// only fire every 4th frame
 				if(!(frameCount % 4))
 					player.fire();
 			}
-			
+
 			this.radius = this.radius + (sin( frameCount / 4 ) / 2);
 
 			float dx = nX - this.x;
@@ -152,26 +185,24 @@ class Player
 			ellipse( 0, 0, this.radius / 2, this.radius / 2 );
 			popMatrix();
 		} else {
-			// dead
-			textSize(50);
-			fill( 0, 121, 184 );
-			text("GAME OVER", (width/2)-150, height/2-85);			
+			// draw blood puddle?
 		}
 	}
-	
+
 	void fire (){
 		console.log('Fire called');
-		if(bullets.size() > maxBullets-1) 
+		if(bullets.size() > maxBullets-1)
 			return;
 		bullets.add(new Bullet(x, y, angle));
 	}
-	
+
 	void takeDamage() {
 		this.health--;
-		
+
 		if(this.health <= 0) {
-			
+
 			this.health = 0;
+			gameState = 2;
 		}
 	}
 }
@@ -181,12 +212,14 @@ class Zombie
 	float x, y, angle, radius;
 	float size = 35;
 	boolean alive;
+	int hit;
 
 	Zombie(int x, int y) {
 		this.x = x;
 		this.y = y;
 		this.radius = 50.0;
-		alive = true;
+		this.alive = true;
+		this.hit = 0;
 		this.rand = Math.random() * 100;
 	}
 
@@ -198,17 +231,26 @@ class Zombie
 		float dx = player.x - this.x;
 		float dy = player.y - this.y;
 		this.angle = atan2(dy, dx);
+
+		pushMatrix();
 		
-		if(canMove) {
+		if(canMove && !this.hit) {
 			mag = Math.sqrt(dx*dx + dy*dy);
 
 			this.x += (0.75) * ((player.x - this.x) / mag);
 			this.y += (0.75) * ((player.y - this.y) / mag);
 		}
-		
-		pushMatrix();
+			
 		translate(this.x, this.y);
 		rotate(this.angle);
+		
+		if(this.hit > 0) {
+			if((hit + 15) < frameCount) {
+				this.alive = false;
+			}
+			scale((15.0 - (frameCount - this.hit)) / 15.0);
+		}
+		
 		// Set stroke-color black
 		stroke(000);
 
@@ -221,6 +263,7 @@ class Zombie
 		fill( 0, 255, 121);
 		ellipse( 0, 0, this.radius / 2, this.radius / 2 );
 		popMatrix();
+
 	}
 }
 
@@ -238,7 +281,7 @@ class ZombieManager
 		// Cycle through the ArrayList backwards b/c we are deleting
 		for (int i = zombies.size()-1; i >= 0; i--) {
 			Zombie z = (Zombie) zombies.get(i);
-			
+
 			if(!z.alive) {
 				zombies.remove(i);
 			} else {
@@ -247,28 +290,31 @@ class ZombieManager
 					float dx = player.x - z.x;
 					float dy = player.y - z.y;
 					float dist = Math.sqrt(dx*dx + dy*dy);
-					
+
 					if(dist < z.size) {
 						// player take damage
 						player.takeDamage();
 						canMove = false;
 					}
 				}
-				
+
 				// test if it can move
 				boolean canMove = true;
 				for (int j = 0; j < i; j++) {
 					// simple collision test
 					Zombie z2 = (Zombie) zombies.get(j);
-					
+
+					if(z2.hit)
+						continue;
+
 					float dx = z2.x - z.x;
 					float dy = z2.y - z.y;
 					float dist = Math.sqrt(dx*dx + dy*dy);
-					
+
 					if(dist < z.size)
 						canMove = false;
 				}
-				
+
 				z.draw(canMove);
 			}
 		}
@@ -276,14 +322,14 @@ class ZombieManager
 	}
 
 	void addZombie() {
-	
+
 		if(this.zombies.size() >= this.maxCount)
 			return;
-			
+
 		int x = 0;
 		int y = 0;
 		int r = (int)(Math.random() * 4);
-		
+
 		switch(r)
 		{
 			case 0:// left
@@ -292,16 +338,16 @@ class ZombieManager
 				break;
 			case 1: // top
 				x = halfWidth - (Math.random() * width) + halfWidth;
-				y = 0 - 50;			
+				y = 0 - 50;
 				break;
 			case 2: // right
 				x = width + 50;
-				y = halfHeight - (Math.random() * height) + halfHeight;			
+				y = halfHeight - (Math.random() * height) + halfHeight;
 				break;
 			case 3: // bottom
 				x = halfWidth - (Math.random() * width) + halfWidth;
-				y = height + 50;			
-				break;				
+				y = height + 50;
+				break;
 		}
 
 		this.zombies.add(new Zombie(x, y));
@@ -313,52 +359,54 @@ class Bullet
 {
 	float x, y, angle;
 	int size=5;
-	float speed=4;	
+	float speed=4;
 	boolean alive;
-	
+
 	Bullet(x, y, angle) {
 		this.x=x+(cos(x)*(this.speed+2));
 		this.y=y+(sin(y)*(this.speed+2));
 		this.angle=angle;
 		this.alive=true;
-		
+
 		float dx1 = x - nX;
 		float dy1 = y - nY;
 		float mag = Math.sqrt(dx1*dx1 + dy1*dy1);
-					
+
 		this.dy = dx1 / mag;
 		this.dx = dy1 / mag;
-		
+
 		alive = true;
 	}
-	
+
 	void move(){
-		
+
 		this.x+=cos(angle)*speed;
 		this.y+=sin(angle)*speed;
 
 		if((this.x < 0 || this.x > width)||(this.y < 0 || this.y > height))
 			this.alive = false;
 
-		// Hit an zombie?	
+		// Hit an zombie?
 		int zc=zm.zombies.size()-1;
-		for(int i=zc;i>=0;i--){ 
+		for(int i=zc;i>=0;i--) {
 			Zombie z = (Zombie) zm.zombies.get(i);
+
+			if(z.hit)
+				continue;
 
 			float dx=z.x-this.x;
 			float dy=z.y-this.y;
 			float dist=sqrt(dx*dx+dy*dy);
 
-			if(dist-(size/2) < z.size/2){
-
-				zm.zombies.remove(i);
+			if(dist-(size/2) < z.size/2) {
+				z.hit = frameCount;
 				killCount++;
 				this.alive = false;
 				return;
 			}
 		}
-	}	
-	
+	}
+
 	void draw() {
 		translate(0,0);
 		fill( 255, 255, 255 );
