@@ -4,7 +4,9 @@ int halfWidth, halfHeight;
 int X, Y;
 int nX, nY;
 int delay = 16;
-int gameState = 1;
+int gameState = 0;
+int startFrame = 0;
+int currentFrame = 0;
 /*
 0 - start screen
 1 - play
@@ -31,22 +33,30 @@ void setup(){
 	nX = halfWidth;
 	nY = halfHeight;
 
-	player = new Player(halfWidth, halfHeight);
-	zm = new ZombieManager(150);
 
-	for(int i=0;i<20;i++) {
-		zm.addZombie();
-	}
 }
 
 // Main draw loop
 void draw(){
+
+	currentFrame = (frameCount - startFrame);
 
 	// Fill canvas grey
 	background( 100 );
 
 	switch (gameState){
 		case 0:
+			startFrame = frameCount;
+			killCount = 0;
+			currentDifficulty = 0;
+			
+			player = new Player(halfWidth, halfHeight);
+			zm = new ZombieManager(150);		
+		
+			for(int i=0;i<20;i++) {
+				zm.addZombie();
+			}
+			drawStart();
 			break;
 		case 1:
 			drawPlay();
@@ -58,21 +68,18 @@ void draw(){
 		case 3:
 			break;
 	}
-
-
-
 }
 
 void drawPlay () {
 	player.draw();
 
 	// add zombies periodically based on difficulty
-	if(!(frameCount % difficulty[currentDifficulty])){
+	if(!(currentFrame % difficulty[currentDifficulty])){
 		zm.addZombie();
 	}
 
 	// increase difficulty every 1000 frames
-	if(!(frameCount % 1000)) {
+	if(!(currentFrame % 1000)) {
 		currentDifficulty++;
 
 		if(currentDifficulty > 4)
@@ -88,13 +95,37 @@ void drawPlay () {
 	text(str, 10, 20);
 }
 
-void drawGameOver() {
+void drawStart() {
 	// dead
+
 	textSize(75);
+	textAlign(CENTER);
+	
 	fill( 0, 0, 0 );
-	text("GAME OVER", (width/2)-200, height/2-85);
+	text("Zirtual Vombies", (width/2), height/2-85);
+	
+	fill( 255, 255, 255 );
+	text("Zirtual Vombies", (width/2)+5, height/2-90);
+	
+	if((currentFrame % 2) != 0) {
+		textSize(25);
+		fill( 255, 255, 255 );
+		text("Press SPACE to start", (width/2), height/2+85);
+	}
 }
 
+void drawGameOver() {
+	// dead
+
+	textSize(75);
+	fill( 255, 255, 255 );
+	textAlign(CENTER);
+	text("GAME OVER", (width/2), height/2-85);
+	
+	textSize(25);
+	fill( 255, 255, 255 );
+	text("Press SPACE to try again", (width/2), height/2+85);
+}
 
 // Set circle's next destination
 void mouseMoved(){
@@ -121,6 +152,19 @@ void mouseReleased() {
 		case 37: // Left Mouse
 			canFire = false;
 			break;
+	}
+}
+
+void keyPressed (){
+	if(key == ' ') {
+		switch(gameState) {
+			case 0:
+				gameState = 1;
+				break;
+			case 2:
+				gameState = 0;
+				break;
+		}
 	}
 }
 
@@ -158,11 +202,11 @@ class Player
 
 			if(canFire) {
 				// only fire every 4th frame
-				if(!(frameCount % 4))
+				if(!(currentFrame % 4))
 					player.fire();
 			}
 
-			this.radius = this.radius + (sin( frameCount / 4 ) / 2);
+			this.radius = this.radius + (sin( currentFrame / 4 ) / 2);
 
 			float dx = nX - this.x;
 			float dy = nY - this.y;
@@ -226,7 +270,7 @@ class Zombie
 	// always face player.
 	void draw(boolean canMove) {
 
-		this.radius = this.radius + (sin( (this.rand + frameCount) / 3 ) / 2);
+		this.radius = this.radius + (sin( (this.rand + currentFrame) / 3 ) / 2);
 
 		float dx = player.x - this.x;
 		float dy = player.y - this.y;
@@ -245,10 +289,10 @@ class Zombie
 		rotate(this.angle);
 		
 		if(this.hit > 0) {
-			if((hit + 15) < frameCount) {
+			if((hit + 15) < currentFrame) {
 				this.alive = false;
 			}
-			scale((15.0 - (frameCount - this.hit)) / 15.0);
+			scale((15.0 - (currentFrame - this.hit)) / 15.0);
 		}
 		
 		// Set stroke-color black
@@ -399,7 +443,7 @@ class Bullet
 			float dist=sqrt(dx*dx+dy*dy);
 
 			if(dist-(size/2) < z.size/2) {
-				z.hit = frameCount;
+				z.hit = currentFrame;
 				killCount++;
 				this.alive = false;
 				return;
@@ -413,138 +457,3 @@ class Bullet
 		ellipse(x,y,size,size);
 	}
 }
-
-
-/*
-// Simple Vector3D Class
-public class Vector3D {
-  public float x;
-  public float y;
-  public float z;
-
-  Vector3D(float x_, float y_, float z_) {
-    x = x_; y = y_; z = z_;
-  }
-
-  Vector3D(float x_, float y_) {
-    x = x_; y = y_; z = 0f;
-  }
-
-  Vector3D() {
-    x = 0f; y = 0f; z = 0f;
-  }
-
-  void setX(float x_) {
-    x = x_;
-  }
-
-  void setY(float y_) {
-    y = y_;
-  }
-
-  void setZ(float z_) {
-    z = z_;
-  }
-
-  void setXY(float x_, float y_) {
-    x = x_;
-    y = y_;
-  }
-
-  void setXYZ(float x_, float y_, float z_) {
-    x = x_;
-    y = y_;
-    z = z_;
-  }
-
-  void setXYZ(Vector3D v) {
-    x = v.x;
-    y = v.y;
-    z = v.z;
-  }
-
-  public float magnitude() {
-    return (float) Math.sqrt(x*x + y*y + z*z);
-  }
-
-  public Vector3D copy() {
-    return new Vector3D(x,y,z);
-  }
-
-  public Vector3D copy(Vector3D v) {
-    return new Vector3D(v.x, v.y,v.z);
-  }
-
-  public void add(Vector3D v) {
-    x += v.x;
-    y += v.y;
-    z += v.z;
-  }
-
-  public void sub(Vector3D v) {
-    x -= v.x;
-    y -= v.y;
-    z -= v.z;
-  }
-
-  public void mult(float n) {
-    x *= n;
-    y *= n;
-    z *= n;
-  }
-
-  public void div(float n) {
-    x /= n;
-    y /= n;
-    z /= n;
-  }
-
-  public void normalize() {
-    float m = magnitude();
-    if (m > 0) {
-       div(m);
-    }
-  }
-
-  public void limit(float max) {
-    if (magnitude() > max) {
-      normalize();
-      mult(max);
-    }
-  }
-
-  public float heading2D() {
-    float angle = (float) Math.atan2(-y, x);
-    return -1*angle;
-  }
-
-  public Vector3D add(Vector3D v1, Vector3D v2) {
-    Vector3D v = new Vector3D(v1.x + v2.x,v1.y + v2.y, v1.z + v2.z);
-    return v;
-  }
-
-  public Vector3D sub(Vector3D v1, Vector3D v2) {
-    Vector3D v = new Vector3D(v1.x - v2.x,v1.y - v2.y,v1.z - v2.z);
-    return v;
-  }
-
-  public Vector3D div(Vector3D v1, float n) {
-    Vector3D v = new Vector3D(v1.x/n,v1.y/n,v1.z/n);
-    return v;
-  }
-
-  public Vector3D mult(Vector3D v1, float n) {
-    Vector3D v = new Vector3D(v1.x*n,v1.y*n,v1.z*n);
-    return v;
-  }
-
-  public float distance (Vector3D v1, Vector3D v2) {
-
-    float dx = v1.x - v2.x;
-    float dy = v1.y - v2.y;
-    float dz = v1.z - v2.z;
-
-    return (float) Math.sqrt(dx*dx + dy*dy + dz*dz);
-  }
-}
-*/

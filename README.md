@@ -1,4 +1,6 @@
-Zirtual Vombies
+# Zirtual Vombies #
+
+## Simple shootem up using HTML5 ##
 
 http://snop.com/
 http://processingjs.org/
