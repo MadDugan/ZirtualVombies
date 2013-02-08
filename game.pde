@@ -1,9 +1,8 @@
 // Global variables
 float radius = 50.0;
-int canvas_width = 1024;
-int canvas_height = 768;
+final int canvas_width = 1024;
+final int canvas_height = 768;
 int halfWidth, halfHeight;
-int X, Y;
 int nX, nY;
 int delay = 16;
 int gameState = 0;
@@ -30,8 +29,6 @@ void setup(){
 	frameRate( 30 );
 	halfWidth = canvas_width / 2;
 	halfHeight = canvas_height / 2;
-	X = halfWidth;
-	Y = halfHeight;
 	nX = halfWidth;
 	nY = halfHeight;
 		
@@ -137,7 +134,6 @@ void drawGameOver() {
 	text("Press SPACE to try again", (width/2), height/2+85);
 }
 
-// Set circle's next destination
 void mouseMoved(){
 	nX = mouseX;
 	nY = mouseY;
